@@ -11,10 +11,10 @@ class PassthroughConfig(AppConfig):
         if os.environ.get("RUN_MAIN") != "true":
             return
 
-        # from .downlink_service import start_telemetry_pipeline
+        from .downlink_service import start_telemetry_pipeline
         from .uplink_service import start_command_pipeline
 
-        # threading.Thread(target=start_telemetry_pipeline, daemon=True).start()
+        threading.Thread(target=start_telemetry_pipeline, daemon=True).start()
         threading.Thread(target=start_command_pipeline, daemon=True).start()
 
         print("Gateway running: telemetry + commands")
