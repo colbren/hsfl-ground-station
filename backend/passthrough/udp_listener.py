@@ -16,14 +16,17 @@ def start_listener():
     while True:
         data, addr = sock.recvfrom(4096)
 
-        packet_buffer.appendleft({
+        packet = {
             "timestamp": datetime.now().isoformat(),
             "source": f"{addr[0]}:{addr[1]}",
             "length": len(data),
             "data": data.hex(),
-        })
+        }
+
+        packet_buffer.appendleft(packet)
 
         print(
-            f"Packet received from {addr[0]}:{addr[1]} "
-            f"({len(data)} bytes)"
+            f"[{packet['timestamp']}] "
+            f"{packet['source']} "
+            f"{packet['length']} bytes"
         )
