@@ -8,17 +8,12 @@ class PassthroughConfig(AppConfig):
     name = "passthrough"
 
     def ready(self):
-        # Prevent Django autoreloader from starting two listeners
         if os.environ.get("RUN_MAIN") != "true":
             return
 
-        from .udp_listener import start_listener
+        from .service import start_passthrough
 
-        thread = threading.Thread(
-            target=start_listener,
+        threading.Thread(
+            target=start_passthrough,
             daemon=True,
-        )
-
-        thread.start()
-
-        print("Started UDP listener thread")
+        ).start()
