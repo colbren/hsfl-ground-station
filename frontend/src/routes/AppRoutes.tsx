@@ -8,6 +8,7 @@ import GroundStationsPage from "../pages/GroundStationsPage";
 import SchedulerPage from "../pages/SchedulerPage";
 import PassHistoryPage from "../pages/PassHistoryPage";
 import PassThroughPage from "../pages/PassThroughPage";
+import SatelliteTracking from "../pages/SatelliteTracking";
 
 export default function AppRoutes() {
 
@@ -42,6 +43,11 @@ export default function AppRoutes() {
                     <Route
                         path="/passthrough"
                         element={<PassThroughPage />}
+                    />
+
+                    <Route
+                        path="/tracking"
+                        element={<SatelliteTracking />}
                     />
                 </Routes>
 

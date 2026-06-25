@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "scheduler",
     "tle",
     "passthrough",
+    "tracking",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

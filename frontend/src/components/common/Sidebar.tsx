@@ -51,6 +51,10 @@ export default function Sidebar() {
                 <ListItemButton onClick={() => navigate("/passthrough")}>
                     <ListItemText primary="Pass Through" />
                 </ListItemButton>
+
+                <ListItemButton onClick={() => navigate("/tracking")}>
+                    <ListItemText primary="Satellite Tracking" />
+                </ListItemButton>
             </List>
         </Drawer>
     );

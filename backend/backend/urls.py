@@ -26,4 +26,5 @@ urlpatterns = [
     path("api/", include("scheduler.urls")),
     path("api/", include("passes.urls")),
     path("api/passthrough/", include("passthrough.urls")),
+    path("api/tracking/", include("tracking.urls")),
 ]
