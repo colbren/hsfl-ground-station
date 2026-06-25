@@ -27,4 +27,5 @@ urlpatterns = [
     path("api/", include("passes.urls")),
     path("api/passthrough/", include("passthrough.urls")),
     path("api/tracking/", include("tracking.urls")),
+    path("api/auth/", include("authentication.urls")),
 ]

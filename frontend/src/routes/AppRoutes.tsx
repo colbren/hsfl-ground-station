@@ -1,4 +1,9 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+    BrowserRouter,
+    Routes,
+    Route,
+    Navigate,
+} from "react-router-dom";
 
 import DashboardLayout from "../layouts/DashboardLayout";
 
@@ -10,15 +15,29 @@ import PassHistoryPage from "../pages/PassHistoryPage";
 import PassThroughPage from "../pages/PassThroughPage";
 import SatelliteTracking from "../pages/SatelliteTracking";
 
-export default function AppRoutes() {
+import LoginPage from "../auth/LoginPage";
+import ProtectedRoute from "../auth/ProtectedRoute";
 
+export default function AppRoutes() {
     return (
         <BrowserRouter>
+            <Routes>
+                <Route
+                    path="/login"
+                    element={<LoginPage />}
+                />
 
-            <DashboardLayout>
-
-                <Routes>
-                    <Route path="/" element={<DashboardPage />} />
+                <Route
+                    element={
+                        <ProtectedRoute>
+                            <DashboardLayout />
+                        </ProtectedRoute>
+                    }
+                >
+                    <Route
+                        path="/"
+                        element={<DashboardPage />}
+                    />
 
                     <Route
                         path="/satellites"
@@ -49,10 +68,13 @@ export default function AppRoutes() {
                         path="/tracking"
                         element={<SatelliteTracking />}
                     />
-                </Routes>
+                </Route>
 
-            </DashboardLayout>
-
+                <Route
+                    path="*"
+                    element={<Navigate to="/" replace />}
+                />
+            </Routes>
         </BrowserRouter>
     );
 }

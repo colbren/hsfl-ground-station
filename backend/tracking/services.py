@@ -5,7 +5,7 @@ from skyfield.api import EarthSatellite, load
 NORAD_ID = 25544
 
 BASE_URL = "https://api.n2yo.com/rest/v1/satellite"
-API_KEY = "YOUR-API-KEY-HERE"
+API_KEY = "2RMYN3-ASVBMH-B59VNK-5MHU"
 
 ts = load.timescale()
 

@@ -1,13 +1,10 @@
 import { Box, Toolbar } from "@mui/material";
+import { Outlet } from "react-router-dom";
 
 import Navbar from "../components/common/Navbar";
 import Sidebar from "../components/common/Sidebar";
 
-interface Props {
-    children: React.ReactNode;
-}
-
-export default function DashboardLayout({ children }: Props) {
+export default function DashboardLayout() {
     return (
         <Box sx={{ display: "flex" }}>
             <Navbar />
@@ -21,10 +18,9 @@ export default function DashboardLayout({ children }: Props) {
                     p: 3,
                 }}
             >
-                {/* pushes content below navbar */}
                 <Toolbar />
 
-                {children}
+                <Outlet />
             </Box>
         </Box>
     );
