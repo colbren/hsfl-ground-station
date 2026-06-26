@@ -7,5 +7,29 @@
     "@tanstack/react-query": "^5.101.0",
     "axios": "^1.18.0",
     "react-router-dom": "^7.17.0"
+  },
+  "name": "ground-station",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && .venv/bin/python manage.py runserver",
+    "frontend": "cd frontend && npm run dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/colbren/hsfl-ground-station.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/colbren/hsfl-ground-station/issues"
+  },
+  "homepage": "https://github.com/colbren/hsfl-ground-station#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.3"
   }
 }
