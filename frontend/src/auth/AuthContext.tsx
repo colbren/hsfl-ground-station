@@ -21,30 +21,57 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>(null!);
 
+/* -----------------------------
+   CSRF helper
+----------------------------- */
+function getCookie(name: string) {
+    let cookieValue: string | null = null;
+
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+
+            if (cookie.startsWith(name + "=")) {
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1)
+                );
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+
 export function AuthProvider({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const [user, setUser] =
-        useState<User | null>(null);
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    const [loading, setLoading] =
-        useState(true);
-
+    /* -----------------------------
+       Initialize session on load
+    ----------------------------- */
     useEffect(() => {
-        fetch(
-            "http://localhost:8000/api/auth/me/",
-            {
-                credentials: "include",
-            }
-        )
+        fetch("http://localhost:8000/api/auth/me/", {
+            credentials: "include",
+        })
             .then((res) => res.json())
             .then((data) => {
-                if (data.authenticated) {
+                if (data.authenticated && data.user) {
                     setUser(data.user);
+                } else {
+                    setUser(null);
                 }
-
+            })
+            .catch(() => {
+                setUser(null);
+            })
+            .finally(() => {
                 setLoading(false);
             });
     }, []);
@@ -57,14 +84,11 @@ export function AuthProvider({
             "http://localhost:8000/api/auth/login/",
             {
                 method: "POST",
-
                 credentials: "include",
-
                 headers: {
-                    "Content-Type":
-                        "application/json",
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken") || "",
                 },
-
                 body: JSON.stringify({
                     username,
                     password,
@@ -76,9 +100,9 @@ export function AuthProvider({
             return false;
         }
 
-        const user = await res.json();
+        const data = await res.json();
 
-        setUser(user);
+        setUser(data);
 
         return true;
     }
@@ -90,10 +114,14 @@ export function AuthProvider({
                 method: "POST",
 
                 credentials: "include",
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken") || "",
+                },
             }
         );
 
         setUser(null);
+        window.location.href = "/login";
     }
 
     return (

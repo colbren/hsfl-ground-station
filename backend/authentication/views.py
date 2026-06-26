@@ -1,6 +1,8 @@
 from django.contrib.auth import authenticate, login, logout
+from django.middleware.csrf import get_token
 
-from rest_framework import status
+
+from rest_framework import request, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -39,29 +41,16 @@ def logout_view(request):
 
     logout(request)
 
-    return Response(
-        {
-            "detail": "Logged out."
-        }
+    response = Response(
+        {"detail": "Logged out."}
     )
+
+    response.delete_cookie("sessionid")
+
+    return response
 
 
 @api_view(["GET"])
 def me_view(request):
 
-    if not request.user.is_authenticated:
-
-        return Response(
-            {
-                "authenticated": False,
-            }
-        )
-
-    return Response(
-        {
-            "authenticated": True,
-            "user": UserSerializer(
-                request.user
-            ).data,
-        }
-    )
+    return Response({"csrfToken": get_token(request)})
