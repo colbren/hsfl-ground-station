@@ -3,6 +3,7 @@ import {
     Paper,
     TextField,
     Typography,
+    Box,
 } from "@mui/material";
 
 import { useState } from "react";
@@ -64,7 +65,21 @@ export default function LoginPage() {
                 <Typography
                     variant="h5"
                     gutterBottom
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                    }}
                 >
+                    <Box
+                        component="img"
+                        src="/hsfl.png"
+                        alt="Logo"
+                        sx={{
+                            width: 50,
+                            height: 50,
+                            mr: 2,
+                        }}
+                    />
                     HSFL Ground Station
                 </Typography>
 
