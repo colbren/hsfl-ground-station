@@ -52,5 +52,15 @@ def logout_view(request):
 
 @api_view(["GET"])
 def me_view(request):
+    if request.user.is_authenticated:
+        return Response({
+            "authenticated": True,
+            "user": UserSerializer(request.user).data,
+            "csrfToken": get_token(request),
+        })
 
-    return Response({"csrfToken": get_token(request)})
+    return Response({
+        "authenticated": False,
+        "user": None,
+        "csrfToken": get_token(request),
+    })
