@@ -4,7 +4,11 @@ from rest_framework.routers import DefaultRouter
 from .views import SatelliteViewSet
 
 router = DefaultRouter()
-router.register("satellites", SatelliteViewSet)
+
+router.register(
+    "satellites",
+    SatelliteViewSet,
+)
 
 urlpatterns = [
     path("", include(router.urls)),

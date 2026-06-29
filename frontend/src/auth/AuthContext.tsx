@@ -21,9 +21,6 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>(null!);
 
-/* -----------------------------
-   CSRF helper
------------------------------ */
 function getCookie(name: string) {
     let cookieValue: string | null = null;
 
@@ -53,9 +50,6 @@ export function AuthProvider({
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    /* -----------------------------
-       Initialize session on load
-    ----------------------------- */
     useEffect(() => {
         fetch("http://localhost:8000/api/auth/me/", {
             credentials: "include",

@@ -2,13 +2,14 @@ from django.db import models
 
 class Satellite(models.Model):
     name = models.CharField(max_length=100)
-    norad_id = models.IntegerField(unique=True)
+    norad_id = models.PositiveIntegerField(unique=True)
 
-    uplink_freq = models.FloatField(null=True, blank=True)
-    downlink_freq = models.FloatField(null=True, blank=True)
+    tle_line1 = models.TextField(blank=True, null=True)
+    tle_line2 = models.TextField(blank=True, null=True)
+    tle_updated = models.DateTimeField(blank=True, null=True)
 
-    mode = models.CharField(max_length=100, blank=True)
-    owner = models.CharField(max_length=100, blank=True)
+    enabled = models.BooleanField(default=True)
+    created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
