@@ -227,7 +227,7 @@ export default function SatelliteTracking() {
         };
 
         update();
-        const interval = setInterval(update, 10000);
+        const interval = setInterval(update, 1000);
 
         return () => clearInterval(interval);
     }, [selectedSat]);
