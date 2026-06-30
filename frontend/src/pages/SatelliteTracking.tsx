@@ -21,7 +21,7 @@ import "leaflet/dist/leaflet.css";
 
 import * as satellite from "satellite.js";
 
-// -------------------- TYPES --------------------
+// ---------------- TYPES ----------------
 
 type Satellite = {
     id: number;
@@ -46,7 +46,7 @@ type PropagatedPos = {
     alt_km: number;
 };
 
-// -------------------- ICON FIX --------------------
+// ---------------- ICON ----------------
 
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
@@ -58,7 +58,13 @@ const defaultIcon = L.icon({
     iconAnchor: [12, 41],
 });
 
-// -------------------- SGP4 --------------------
+// ---------------- NORMALIZE LONGITUDE (IMPORTANT FIX) ----------------
+
+function normalizeLon(lon: number) {
+    return ((lon + 180) % 360) - 180;
+}
+
+// ---------------- SGP4 ----------------
 
 function propagateFromTLE(
     tle1: string,
@@ -75,12 +81,14 @@ function propagateFromTLE(
 
     return {
         lat: satellite.degreesLat(geo.latitude),
-        lon: satellite.degreesLong(geo.longitude),
+        lon: normalizeLon(
+            satellite.degreesLong(geo.longitude)
+        ),
         alt_km: geo.height,
     };
 }
 
-// -------------------- ORBIT PATH --------------------
+// ---------------- ORBIT PATH ----------------
 
 function generateOrbitPath(
     tle1: string,
@@ -106,7 +114,9 @@ function generateOrbitPath(
 
         past.push([
             satellite.degreesLat(geo.latitude),
-            satellite.degreesLong(geo.longitude),
+            normalizeLon(
+                satellite.degreesLong(geo.longitude)
+            ),
         ]);
     }
 
@@ -121,18 +131,19 @@ function generateOrbitPath(
 
         future.push([
             satellite.degreesLat(geo.latitude),
-            satellite.degreesLong(geo.longitude),
+            normalizeLon(
+                satellite.degreesLong(geo.longitude)
+            ),
         ]);
     }
 
     return { past, future };
 }
 
-// -------------------- DATELINE FIX --------------------
+// ---------------- DATELINE SAFE SPLIT ----------------
 
 function splitDateline(points: [number, number][]) {
     const segments: [number, number][][] = [];
-
     let current: [number, number][] = [];
 
     for (let i = 0; i < points.length; i++) {
@@ -141,7 +152,6 @@ function splitDateline(points: [number, number][]) {
 
         if (prev) {
             const lonDiff = Math.abs(curr[1] - prev[1]);
-
             if (lonDiff > 180) {
                 segments.push(current);
                 current = [];
@@ -156,19 +166,20 @@ function splitDateline(points: [number, number][]) {
     return segments;
 }
 
-// -------------------- MAIN --------------------
+// ---------------- MAIN ----------------
 
 export default function SatelliteTracking() {
     const [satellites, setSatellites] = useState<Satellite[]>([]);
     const [groundStations, setGroundStations] = useState<GroundStation[]>([]);
     const [selectedId, setSelectedId] = useState<number | "">("");
 
-    const [position, setPosition] = useState<PropagatedPos | null>(null);
+    const [position, setPosition] =
+        useState<PropagatedPos | null>(null);
 
     const [pastPath, setPastPath] = useState<[number, number][]>([]);
     const [futurePath, setFuturePath] = useState<[number, number][]>([]);
 
-    // -------------------- LOAD SATELLITES --------------------
+    // LOAD SATELLITES
     useEffect(() => {
         fetch("http://localhost:8000/api/satellites/")
             .then((res) => res.json())
@@ -178,21 +189,20 @@ export default function SatelliteTracking() {
             });
     }, []);
 
-    // -------------------- LOAD GROUND STATIONS --------------------
+    // LOAD GROUND STATIONS
     useEffect(() => {
         fetch("http://localhost:8000/api/groundstations/")
             .then((res) => res.json())
-            .then((data) => {
-                setGroundStations(data);
-            });
+            .then((data) => setGroundStations(data));
     }, []);
 
     const selectedSat = useMemo(
-        () => satellites.find((s) => s.id === selectedId),
+        () =>
+            satellites.find((s) => s.id === selectedId),
         [satellites, selectedId]
     );
 
-    // -------------------- LIVE UPDATE --------------------
+    // LIVE UPDATE
     useEffect(() => {
         if (!selectedSat) return;
 
@@ -222,19 +232,15 @@ export default function SatelliteTracking() {
         return () => clearInterval(interval);
     }, [selectedSat]);
 
-    // -------------------- RENDER --------------------
-
     return (
-        <Box sx={{ display: "flex", height: "calc(100vh - 64px)" }}>
+        <Box
+            sx={{
+                display: "flex",
+                height: "calc(100vh - 64px)",
+            }}
+        >
             {/* LEFT PANEL */}
-            <Paper
-                sx={{
-                    width: 320,
-                    p: 2,
-                    borderRadius: 0,
-                    overflowY: "auto",
-                }}
-            >
+            <Paper sx={{ width: 320, p: 2 }}>
                 <Typography variant="h6">
                     Satellite Tracking
                 </Typography>
@@ -249,16 +255,18 @@ export default function SatelliteTracking() {
                     sx={{ mt: 2 }}
                 >
                     {satellites.map((sat) => (
-                        <MenuItem key={sat.id} value={sat.id}>
+                        <MenuItem
+                            key={sat.id}
+                            value={sat.id}
+                        >
                             {sat.name}
                         </MenuItem>
                     ))}
                 </Select>
 
                 {selectedSat && (
-                    <Box sx={{ mt: 2, fontSize: 13 }}>
+                    <Box sx={{ mt: 2 }}>
                         <b>{selectedSat.name}</b>
-                        <div>NORAD: {selectedSat.norad_id}</div>
                     </Box>
                 )}
             </Paper>
@@ -270,70 +278,81 @@ export default function SatelliteTracking() {
                     zoom={3}
                     minZoom={3}
                     maxZoom={15}
-                    worldCopyJump={false}
-                    style={{ height: "100%", width: "100%" }}
+                    worldCopyJump={false} // IMPORTANT
+                    maxBounds={[
+                        [-90, -180],
+                        [90, 180],
+                    ]}
+                    maxBoundsViscosity={1.0}
+                    style={{
+                        height: "100%",
+                        width: "100%",
+                    }}
                 >
                     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-                    {/* ---------------- GROUND STATIONS ---------------- */}
+                    {/* GROUND STATIONS */}
                     {groundStations.map((gs) => (
                         <Marker
                             key={gs.id}
                             position={[
                                 gs.latitude,
-                                gs.longitude,
+                                normalizeLon(
+                                    gs.longitude
+                                ),
                             ]}
                             icon={defaultIcon}
                         >
                             <Popup>
-                                <strong>{gs.name}</strong>
+                                <b>{gs.name}</b>
                                 <br />
                                 Status: {gs.status}
-                                <br />
-                                Lat: {gs.latitude}
-                                <br />
-                                Lon: {gs.longitude}
                             </Popup>
                         </Marker>
                     ))}
 
-                    {/* ---------------- SATELLITE ---------------- */}
+                    {/* SATELLITE */}
                     {position && selectedSat && (
                         <Marker
-                            position={[position.lat, position.lon]}
+                            position={[
+                                position.lat,
+                                position.lon,
+                            ]}
                             icon={defaultIcon}
                         >
                             <Popup>
-                                <strong>{selectedSat.name}</strong>
-                                <br />
-                                Alt: {position.alt_km.toFixed(1)} km
+                                <b>{selectedSat.name}</b>
                             </Popup>
                         </Marker>
                     )}
 
-                    {/* ---------------- ORBIT PATHS ---------------- */}
-                    {splitDateline(pastPath).map((seg, i) => (
-                        <Polyline
-                            key={`past-${i}`}
-                            positions={seg}
-                            pathOptions={{
-                                color: "cyan",
-                                weight: 2,
-                            }}
-                        />
-                    ))}
+                    {/* ORBIT */}
+                    {splitDateline(pastPath).map(
+                        (seg, i) => (
+                            <Polyline
+                                key={`past-${i}`}
+                                positions={seg}
+                                pathOptions={{
+                                    color: "cyan",
+                                    weight: 2,
+                                }}
+                            />
+                        )
+                    )}
 
-                    {splitDateline(futurePath).map((seg, i) => (
-                        <Polyline
-                            key={`future-${i}`}
-                            positions={seg}
-                            pathOptions={{
-                                color: "orange",
-                                weight: 2,
-                                dashArray: "6 8",
-                            }}
-                        />
-                    ))}
+                    {splitDateline(futurePath).map(
+                        (seg, i) => (
+                            <Polyline
+                                key={`future-${i}`}
+                                positions={seg}
+                                pathOptions={{
+                                    color: "orange",
+                                    weight: 2,
+                                    dashArray: "6 8",
+                                }}
+                            />
+                        )
+                    )}
                 </MapContainer>
             </Box>
         </Box>
