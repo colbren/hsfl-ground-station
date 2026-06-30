@@ -14,6 +14,7 @@ import SchedulerPage from "../pages/SchedulerPage";
 import PassHistoryPage from "../pages/PassHistoryPage";
 import PassThroughPage from "../pages/PassThroughPage";
 import SatelliteTracking from "../pages/SatelliteTracking";
+import ScheduledPassDetail from "../pages/ScheduledPassDetail"
 
 import LoginPage from "../auth/LoginPage";
 import ProtectedRoute from "../auth/ProtectedRoute";
@@ -52,6 +53,11 @@ export default function AppRoutes() {
                     <Route
                         path="/scheduler"
                         element={<SchedulerPage />}
+                    />
+
+                    <Route
+                        path="/scheduled-passes/:id"
+                        element={<ScheduledPassDetail />}
                     />
 
                     <Route

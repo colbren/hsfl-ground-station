@@ -64,11 +64,13 @@ export default function SchedulerForm({
             return;
         }
 
-        const start =
-            `${startDate}T${startTime}:00`;
+        const start = new Date(
+            `${startDate}T${startTime}:00`
+        ).toISOString();
 
-        const end =
-            `${endDate}T${endTime}:00`;
+        const end = new Date(
+            `${endDate}T${endTime}:00`
+        ).toISOString();
 
         onSearch(
             selectedSatellite,

@@ -8,6 +8,8 @@ import {
     TableRow
 } from "@mui/material";
 
+import { useNavigate } from "react-router-dom";
+
 import StatusBadge from "../common/StatusBadge";
 import type { ScheduledPass } from "../../types/scheduler";
 
@@ -18,6 +20,8 @@ interface Props {
 export default function RequestedPassesTable({
     passes
 }: Props) {
+
+    const navigate = useNavigate();
 
     return (
 
@@ -39,7 +43,19 @@ export default function RequestedPassesTable({
 
                     {passes.map(pass => (
 
-                        <TableRow key={pass.id}>
+                        <TableRow
+                            key={pass.id}
+                            hover
+                            sx={{
+                                cursor: "pointer",
+                                "&:hover": {
+                                    backgroundColor: "action.hover",
+                                },
+                            }}
+                            onClick={() =>
+                                navigate(`/scheduled-passes/${pass.id}`)
+                            }
+                        >
 
                             <TableCell>
                                 {pass.satellite_name}

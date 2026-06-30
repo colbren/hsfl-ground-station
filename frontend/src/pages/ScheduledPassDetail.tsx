@@ -1,99 +1,338 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Box, Paper, Typography, LinearProgress } from "@mui/material";
-import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
+
+import {
+    Box,
+    Paper,
+    Typography,
+    Grid,
+    LinearProgress,
+    Chip,
+    Divider,
+} from "@mui/material";
+
+import axios from "axios";
 
 export default function ScheduledPassDetail() {
-  const { id } = useParams();
-  const [pass, setPass] = useState<any>(null);
-  const [progress, setProgress] = useState(0);
 
-  useEffect(() => {
-    fetch(`/api/scheduled-passes/${id}/`)
-      .then((res) => res.json())
-      .then((data) => setPass(data));
-  }, [id]);
+    const { id } = useParams();
 
-  useEffect(() => {
-    if (!pass) return;
+    const [pass, setPass] = useState<any>(null);
+    const [progress, setProgress] = useState(0);
+    const [countdown, setCountdown] = useState("");
 
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const start = new Date(pass.start_time).getTime();
-      const end = new Date(pass.end_time).getTime();
+    useEffect(() => {
+        axios
+            .get(`http://localhost:8000/api/scheduled-passes/${id}/`)
+            .then((res) => setPass(res.data));
+    }, [id]);
 
-      const pct = ((now - start) / (end - start)) * 100;
-      setProgress(Math.max(0, Math.min(100, pct)));
-    }, 1000);
+    useEffect(() => {
 
-    return () => clearInterval(interval);
-  }, [pass]);
+        if (!pass) return;
 
-  if (!pass) return <div>Loading...</div>;
+        function updateTimer() {
 
-  return (
-    <Box p={2}>
-      {/* HEADER */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h5">
-          {pass.satellite.name}
-        </Typography>
+            const now = new Date();
 
-        <Typography>
-          Ground Station: {pass.ground_station.name}
-        </Typography>
+            const start = new Date(pass.start_time);
+            const end = new Date(pass.end_time);
 
-        <Typography>
-          Max Elevation: {pass.max_elevation}°
-        </Typography>
+            const total =
+                end.getTime() - start.getTime();
 
-        <Typography>
-          Duration: {Math.round(pass.duration_seconds / 60)} min
-        </Typography>
+            const elapsed =
+                now.getTime() - start.getTime();
 
-        <Typography variant="caption">
-          TLE used: {pass.tle_line1?.slice(0, 30)}...
-        </Typography>
-      </Paper>
+            const pct =
+                Math.max(
+                    0,
+                    Math.min(
+                        100,
+                        (elapsed / total) * 100
+                    )
+                );
 
-      {/* MAP */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <MapContainer
-          center={[
-            pass.ground_station.latitude,
-            pass.ground_station.longitude,
-          ]}
-          zoom={2}
-          style={{ height: "400px" }}
-        >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            setProgress(pct);
 
-          <Marker
-            position={[
-              pass.ground_station.latitude,
-              pass.ground_station.longitude,
-            ]}
-          />
+            if (now < start) {
 
-          {pass.orbit_path?.samples && (
-            <Polyline
-              positions={pass.orbit_path.samples.map((p: any) => [
-                p.lat,
-                p.lon,
-              ])}
-            />
-          )}
-        </MapContainer>
-      </Paper>
+                const diff =
+                    start.getTime() - now.getTime();
 
-      {/* PROGRESS */}
-      <Paper sx={{ p: 2 }}>
-        <Typography>Pass Progress</Typography>
-        <LinearProgress variant="determinate" value={progress} />
-        <Typography>
-          {progress.toFixed(0)}%
-        </Typography>
-      </Paper>
-    </Box>
-  );
+                setCountdown(
+                    formatTime(diff) + " until AOS"
+                );
+
+            }
+            else if (now > end) {
+
+                setCountdown("Pass Complete");
+
+            }
+            else {
+
+                const diff =
+                    end.getTime() - now.getTime();
+
+                setCountdown(
+                    formatTime(diff) + " remaining"
+                );
+
+            }
+
+        }
+
+        updateTimer();
+
+        const interval =
+            setInterval(updateTimer, 1000);
+
+        return () => clearInterval(interval);
+
+    }, [pass]);
+
+    function formatTime(ms: number) {
+
+        const totalSeconds =
+            Math.floor(ms / 1000);
+
+        const hours =
+            Math.floor(totalSeconds / 3600);
+
+        const minutes =
+            Math.floor((totalSeconds % 3600) / 60);
+
+        const seconds =
+            totalSeconds % 60;
+
+        return `${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    if (!pass)
+        return (
+            <Typography p={3}>
+                Loading...
+            </Typography>
+        );
+
+    const durationMinutes =
+        (
+            (new Date(pass.end_time).getTime() -
+                new Date(pass.start_time).getTime()) /
+            60000
+        ).toFixed(1);
+
+    return (
+
+        <Box p={3}>
+
+            {/* HEADER */}
+
+            <Paper sx={{ p: 3, mb: 3 }}>
+
+                <Typography variant="h4">
+                    {pass.satellite_name}
+                </Typography>
+
+                <Typography
+                    color="text.secondary"
+                    gutterBottom
+                >
+                    {pass.ground_station_name}
+                </Typography>
+
+                <Chip
+                    label={pass.status}
+                    color="primary"
+                />
+
+            </Paper>
+
+            <Grid
+                container
+                spacing={2}
+            >
+
+                {/* PASS INFORMATION */}
+
+                <Grid size={{ xs: 12, md: 6 }}>
+
+                    <Paper sx={{ p: 3 }}>
+
+                        <Typography variant="h6">
+                            Pass Information
+                        </Typography>
+
+                        <Divider sx={{ my: 2 }} />
+
+                        <Typography>
+                            <strong>Start:</strong>
+                        </Typography>
+
+                        <Typography mb={2}>
+                            {new Date(
+                                pass.start_time
+                            ).toLocaleString()}
+                        </Typography>
+
+                        <Typography>
+                            <strong>End:</strong>
+                        </Typography>
+
+                        <Typography mb={2}>
+                            {new Date(
+                                pass.end_time
+                            ).toLocaleString()}
+                        </Typography>
+
+                        <Typography>
+                            <strong>Duration:</strong>
+                        </Typography>
+
+                        <Typography>
+                            {durationMinutes} minutes
+                        </Typography>
+
+                    </Paper>
+
+                </Grid>
+
+                {/* COUNTDOWN */}
+
+                <Grid size={{ xs: 12, md: 6 }}>
+
+                    <Paper sx={{ p: 3 }}>
+
+                        <Typography variant="h6">
+                            Pass Status
+                        </Typography>
+
+                        <Divider sx={{ my: 2 }} />
+
+                        <Typography
+                            variant="h5"
+                            gutterBottom
+                        >
+                            {countdown}
+                        </Typography>
+
+                        <LinearProgress
+                            variant="determinate"
+                            value={progress}
+                            sx={{
+                                height: 12,
+                                borderRadius: 2,
+                                mt: 3,
+                            }}
+                        />
+
+                        <Typography
+                            mt={2}
+                            align="right"
+                        >
+                            {progress.toFixed(0)}%
+                        </Typography>
+
+                    </Paper>
+
+                </Grid>
+
+                {/* MAP */}
+
+                <Grid size={{ xs: 12 }}>
+
+                    <Paper
+                        sx={{
+                            p: 3,
+                            height: 500,
+                        }}
+                    >
+
+                        <Typography variant="h6">
+                            Orbit Map
+                        </Typography>
+
+                        <Divider sx={{ my: 2 }} />
+
+                        <Typography
+                            color="text.secondary"
+                        >
+                            Orbit map coming next.
+                        </Typography>
+
+                    </Paper>
+
+                </Grid>
+
+                {/* LINK */}
+
+                <Grid size={{ xs: 6 }}>
+
+                    <Paper sx={{ p: 3 }}>
+
+                        <Typography variant="h6">
+                            Downlink
+                        </Typography>
+
+                        <Typography
+                            variant="h4"
+                            mt={2}
+                        >
+                            0 B
+                        </Typography>
+
+                    </Paper>
+
+                </Grid>
+
+                <Grid size={{ xs: 6 }}>
+
+                    <Paper sx={{ p: 3 }}>
+
+                        <Typography variant="h6">
+                            Uplink
+                        </Typography>
+
+                        <Typography
+                            variant="h4"
+                            mt={2}
+                        >
+                            0 B
+                        </Typography>
+
+                    </Paper>
+
+                </Grid>
+
+                {/* TLE */}
+
+                <Grid size={{ xs: 12 }}>
+
+                    <Paper sx={{ p: 3 }}>
+
+                        <Typography variant="h6">
+                            TLE Used
+                        </Typography>
+
+                        <Divider sx={{ my: 2 }} />
+
+                        <Typography
+                            fontFamily="monospace"
+                            color="text.secondary"
+                        >
+                            TLE will be added in the next
+                            step.
+                        </Typography>
+
+                    </Paper>
+
+                </Grid>
+
+            </Grid>
+
+        </Box>
+
+    );
+
 }
