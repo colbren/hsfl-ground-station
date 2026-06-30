@@ -5,6 +5,7 @@ import {
     Marker,
     Popup,
     TileLayer,
+    Polyline,
 } from "react-leaflet";
 
 import {
@@ -20,6 +21,8 @@ import "leaflet/dist/leaflet.css";
 
 import * as satellite from "satellite.js";
 
+// -------------------- TYPES --------------------
+
 type Satellite = {
     id: number;
     name: string;
@@ -28,17 +31,22 @@ type Satellite = {
     tle_line2: string;
 };
 
+type GroundStation = {
+    id: number;
+    name: string;
+    status: string;
+    latitude: number;
+    longitude: number;
+    altitudeM: number;
+};
+
 type PropagatedPos = {
     lat: number;
     lon: number;
     alt_km: number;
 };
 
-const HSFL_GS = {
-    name: "HSFL Ground Station",
-    lat: 21.3167,
-    lon: -157.9431,
-};
+// -------------------- ICON FIX --------------------
 
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
@@ -49,6 +57,8 @@ const defaultIcon = L.icon({
     iconSize: [25, 41],
     iconAnchor: [12, 41],
 });
+
+// -------------------- SGP4 --------------------
 
 function propagateFromTLE(
     tle1: string,
@@ -70,50 +80,110 @@ function propagateFromTLE(
     };
 }
 
-// ----------------------------
-function WrappedMarker({
-    lat,
-    lon,
-    children,
-}: {
-    lat: number;
-    lon: number;
-    children: React.ReactNode;
-}) {
-    const longitudes = [lon - 360, lon, lon + 360];
+// -------------------- ORBIT PATH --------------------
 
-    return (
-        <>
-            {longitudes.map((wrappedLon) => (
-                <Marker
-                    key={`${lat}-${wrappedLon}`}
-                    position={[lat, wrappedLon]}
-                    icon={defaultIcon}
-                >
-                    <Popup>{children}</Popup>
-                </Marker>
-            ))}
-        </>
-    );
+function generateOrbitPath(
+    tle1: string,
+    tle2: string,
+    minutesPast = 90,
+    minutesFuture = 90,
+    stepSeconds = 30
+) {
+    const satrec = satellite.twoline2satrec(tle1, tle2);
+    const now = new Date();
+
+    const past: [number, number][] = [];
+    const future: [number, number][] = [];
+
+    for (let t = -minutesPast * 60; t <= 0; t += stepSeconds) {
+        const time = new Date(now.getTime() + t * 1000);
+
+        const pv = satellite.propagate(satrec, time);
+        if (!pv.position) continue;
+
+        const gmst = satellite.gstime(time);
+        const geo = satellite.eciToGeodetic(pv.position, gmst);
+
+        past.push([
+            satellite.degreesLat(geo.latitude),
+            satellite.degreesLong(geo.longitude),
+        ]);
+    }
+
+    for (let t = 0; t <= minutesFuture * 60; t += stepSeconds) {
+        const time = new Date(now.getTime() + t * 1000);
+
+        const pv = satellite.propagate(satrec, time);
+        if (!pv.position) continue;
+
+        const gmst = satellite.gstime(time);
+        const geo = satellite.eciToGeodetic(pv.position, gmst);
+
+        future.push([
+            satellite.degreesLat(geo.latitude),
+            satellite.degreesLong(geo.longitude),
+        ]);
+    }
+
+    return { past, future };
 }
+
+// -------------------- DATELINE FIX --------------------
+
+function splitDateline(points: [number, number][]) {
+    const segments: [number, number][][] = [];
+
+    let current: [number, number][] = [];
+
+    for (let i = 0; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+
+        if (prev) {
+            const lonDiff = Math.abs(curr[1] - prev[1]);
+
+            if (lonDiff > 180) {
+                segments.push(current);
+                current = [];
+            }
+        }
+
+        current.push(curr);
+    }
+
+    if (current.length) segments.push(current);
+
+    return segments;
+}
+
+// -------------------- MAIN --------------------
 
 export default function SatelliteTracking() {
     const [satellites, setSatellites] = useState<Satellite[]>([]);
+    const [groundStations, setGroundStations] = useState<GroundStation[]>([]);
     const [selectedId, setSelectedId] = useState<number | "">("");
 
     const [position, setPosition] = useState<PropagatedPos | null>(null);
 
-    // LOAD SATELLITES
+    const [pastPath, setPastPath] = useState<[number, number][]>([]);
+    const [futurePath, setFuturePath] = useState<[number, number][]>([]);
+
+    // -------------------- LOAD SATELLITES --------------------
     useEffect(() => {
         fetch("http://localhost:8000/api/satellites/")
             .then((res) => res.json())
             .then((data) => {
                 setSatellites(data);
+                if (data.length > 0) setSelectedId(data[0].id);
+            });
+    }, []);
 
-                // auto select first satellite
-                if (data.length > 0) {
-                    setSelectedId(data[0].id);
-                }
+    // -------------------- LOAD GROUND STATIONS --------------------
+    useEffect(() => {
+        fetch("http://localhost:8000/api/groundstations/")
+            .then((res) => res.json())
+            .then((data) => {
+                setGroundStations(data);
             });
     }, []);
 
@@ -122,7 +192,7 @@ export default function SatelliteTracking() {
         [satellites, selectedId]
     );
 
-    // LIVE PROPAGATION
+    // -------------------- LIVE UPDATE --------------------
     useEffect(() => {
         if (!selectedSat) return;
 
@@ -136,19 +206,28 @@ export default function SatelliteTracking() {
             );
 
             if (pos) setPosition(pos);
+
+            const { past, future } = generateOrbitPath(
+                selectedSat.tle_line1,
+                selectedSat.tle_line2
+            );
+
+            setPastPath(past);
+            setFuturePath(future);
         };
 
         update();
-        const interval = setInterval(update, 1000);
+        const interval = setInterval(update, 10000);
 
         return () => clearInterval(interval);
     }, [selectedSat]);
 
+    // -------------------- RENDER --------------------
+
     return (
         <Box sx={{ display: "flex", height: "calc(100vh - 64px)" }}>
-            {/* ---------------- LEFT PANEL ---------------- */}
+            {/* LEFT PANEL */}
             <Paper
-                elevation={3}
                 sx={{
                     width: 320,
                     p: 2,
@@ -169,10 +248,6 @@ export default function SatelliteTracking() {
                     }
                     sx={{ mt: 2 }}
                 >
-                    <MenuItem value="" disabled>
-                        Select Satellite
-                    </MenuItem>
-
                     {satellites.map((sat) => (
                         <MenuItem key={sat.id} value={sat.id}>
                             {sat.name}
@@ -182,65 +257,83 @@ export default function SatelliteTracking() {
 
                 {selectedSat && (
                     <Box sx={{ mt: 2, fontSize: 13 }}>
-                        <div>
-                            <b>{selectedSat.name}</b>
-                        </div>
+                        <b>{selectedSat.name}</b>
                         <div>NORAD: {selectedSat.norad_id}</div>
-
-                        <Box sx={{ mt: 1, fontSize: 11, opacity: 0.7 }}>
-                            <div>TLE Line 1:</div>
-                            <div>{selectedSat.tle_line1}</div>
-                            <div style={{ marginTop: 6 }}>TLE Line 2:</div>
-                            <div>{selectedSat.tle_line2}</div>
-                        </Box>
                     </Box>
                 )}
             </Paper>
 
-            {/* ---------------- MAP AREA ---------------- */}
+            {/* MAP */}
             <Box sx={{ flex: 1 }}>
                 <MapContainer
                     center={[20, -157]}
                     zoom={3}
                     minZoom={3}
                     maxZoom={15}
-                    worldCopyJump={true}
-                    style={{
-                        height: "100%",
-                        width: "100%",
-                    }}
+                    worldCopyJump={false}
+                    style={{ height: "100%", width: "100%" }}
                 >
                     <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-                    {/* Ground Station */}
-                    <WrappedMarker
-                        lat={HSFL_GS.lat}
-                        lon={HSFL_GS.lon}
-                    >
-                        <>
-                            <strong>{HSFL_GS.name}</strong>
-                            <br />
-                            Honolulu, Hawaii
-                        </>
-                    </WrappedMarker>
-
-                    {/* Satellite */}
-                    {position && selectedSat && (
-                        <WrappedMarker
-                            lat={position.lat}
-                            lon={position.lon}
+                    {/* ---------------- GROUND STATIONS ---------------- */}
+                    {groundStations.map((gs) => (
+                        <Marker
+                            key={gs.id}
+                            position={[
+                                gs.latitude,
+                                gs.longitude,
+                            ]}
+                            icon={defaultIcon}
                         >
-                            <>
+                            <Popup>
+                                <strong>{gs.name}</strong>
+                                <br />
+                                Status: {gs.status}
+                                <br />
+                                Lat: {gs.latitude}
+                                <br />
+                                Lon: {gs.longitude}
+                            </Popup>
+                        </Marker>
+                    ))}
+
+                    {/* ---------------- SATELLITE ---------------- */}
+                    {position && selectedSat && (
+                        <Marker
+                            position={[position.lat, position.lon]}
+                            icon={defaultIcon}
+                        >
+                            <Popup>
                                 <strong>{selectedSat.name}</strong>
                                 <br />
-                                Lat: {position.lat.toFixed(2)}°
-                                <br />
-                                Lon: {position.lon.toFixed(2)}°
-                                <br />
                                 Alt: {position.alt_km.toFixed(1)} km
-                            </>
-                        </WrappedMarker>
+                            </Popup>
+                        </Marker>
                     )}
+
+                    {/* ---------------- ORBIT PATHS ---------------- */}
+                    {splitDateline(pastPath).map((seg, i) => (
+                        <Polyline
+                            key={`past-${i}`}
+                            positions={seg}
+                            pathOptions={{
+                                color: "cyan",
+                                weight: 2,
+                            }}
+                        />
+                    ))}
+
+                    {splitDateline(futurePath).map((seg, i) => (
+                        <Polyline
+                            key={`future-${i}`}
+                            positions={seg}
+                            pathOptions={{
+                                color: "orange",
+                                weight: 2,
+                                dashArray: "6 8",
+                            }}
+                        />
+                    ))}
                 </MapContainer>
             </Box>
         </Box>

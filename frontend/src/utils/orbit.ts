@@ -31,3 +31,52 @@ export function generateGroundTrack(
 
     return positions;
 }
+
+function generateOrbitPath(
+    tle1: string,
+    tle2: string,
+    minutesPast = 90,
+    minutesFuture = 90,
+    stepSeconds = 30
+) {
+    const satrec = satellite.twoline2satrec(tle1, tle2);
+
+    const now = new Date();
+
+    const past: [number, number][] = [];
+    const future: [number, number][] = [];
+
+    // ---------------- PAST ----------------
+    for (let t = -minutesPast * 60; t <= 0; t += stepSeconds) {
+        const time = new Date(now.getTime() + t * 1000);
+
+        const pv = satellite.propagate(satrec, time);
+        if (!pv.position) continue;
+
+        const gmst = satellite.gstime(time);
+        const geo = satellite.eciToGeodetic(pv.position, gmst);
+
+        past.push([
+            satellite.degreesLat(geo.latitude),
+            satellite.degreesLong(geo.longitude),
+        ]);
+    }
+
+    // ---------------- FUTURE ----------------
+    for (let t = 0; t <= minutesFuture * 60; t += stepSeconds) {
+        const time = new Date(now.getTime() + t * 1000);
+
+        const pv = satellite.propagate(satrec, time);
+        if (!pv.position) continue;
+
+        const gmst = satellite.gstime(time);
+        const geo = satellite.eciToGeodetic(pv.position, gmst);
+
+        future.push([
+            satellite.degreesLat(geo.latitude),
+            satellite.degreesLong(geo.longitude),
+        ]);
+    }
+
+    return { past, future };
+}
