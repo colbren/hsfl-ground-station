@@ -1,13 +1,9 @@
-import { Box } from "@mui/material";
-import { mockPasses } from "../data/mockPasses";
-import PassCard from "../components/passes/PassCard";
+import { Box, Typography} from "@mui/material";
 
 export default function PassHistoryPage() {
     return (
         <Box>
-            {mockPasses.map((pass) => (
-                <PassCard key={pass.id} pass={pass} />
-            ))}
+            <Typography variant="h4">Pass History</Typography>
         </Box>
     );
 }
