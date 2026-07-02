@@ -23,7 +23,7 @@ export default function ScheduledPassDetail() {
 
     useEffect(() => {
         axios
-            .get(`http://localhost:8000/api/scheduled-passes/${id}/`)
+            .get(`http://192.168.150.104:8000/api/scheduled-passes/${id}/`)
             .then((res) => setPass(res.data));
     }, [id]);
 

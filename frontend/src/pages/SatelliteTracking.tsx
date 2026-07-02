@@ -181,7 +181,7 @@ export default function SatelliteTracking() {
 
     // LOAD SATELLITES
     useEffect(() => {
-        fetch("http://localhost:8000/api/satellites/")
+        fetch("http://192.168.150.104:8000/api/satellites/")
             .then((res) => res.json())
             .then((data) => {
                 setSatellites(data);
@@ -191,7 +191,7 @@ export default function SatelliteTracking() {
 
     // LOAD GROUND STATIONS
     useEffect(() => {
-        fetch("http://localhost:8000/api/groundstations/")
+        fetch("http://192.168.150.104:8000/api/groundstations/")
             .then((res) => res.json())
             .then((data) => setGroundStations(data));
     }, []);

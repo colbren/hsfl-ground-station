@@ -7,7 +7,7 @@ export default function PassThrough() {
     useEffect(() => {
         const interval = setInterval(async () => {
             const response = await fetch(
-                "http://localhost:8000/api/passthrough/packets/"
+                "http://192.168.150.104:8000/api/passthrough/packets/"
             );
 
             const data = await response.json();

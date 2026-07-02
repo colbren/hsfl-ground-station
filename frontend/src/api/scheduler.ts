@@ -2,7 +2,7 @@ import axios from "axios";
 
 export async function getScheduledPasses() {
     const response = await axios.get(
-        "http://localhost:8000/api/scheduled-passes/"
+        "http://192.168.150.104:8000/api/scheduled-passes/"
     );
 
     return response.data;
@@ -16,7 +16,7 @@ export async function searchPasses(
 ) {
 
     const response = await axios.get(
-        "http://localhost:8000/api/passes/search/",
+        "http://192.168.150.104:8000/api/passes/search/",
         {
             params: {
                 satellite,
@@ -41,7 +41,7 @@ export async function createScheduledPass(pass: any) {
     };
 
     return axios.post(
-        "http://localhost:8000/api/scheduled-passes/",
+        "http://192.168.150.104:8000/api/scheduled-passes/",
         payload,
         {
             headers: {

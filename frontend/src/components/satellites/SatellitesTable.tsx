@@ -112,7 +112,7 @@ export default function SatellitesTable({
 
         try {
             await fetch(
-                `http://localhost:8000/api/satellites/${editingSat.id}/`,
+                `http://192.168.150.104:8000/api/satellites/${editingSat.id}/`,
                 {
                     method: "PATCH",
                     headers: {
